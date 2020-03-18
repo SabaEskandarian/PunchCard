@@ -1,0 +1,21 @@
+[package]
+name = "cargo"
+version = "0.1.0"
+authors = ["SabaEskandarian <saba.eskandarian@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[target.'cfg(target_os="android")'.dependencies]
+jni = { version = "0.5", default-features = false }
+
+[lib]
+crate-type = ["dylib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "mybin"
+path = "src/bin.rs"
+
+[dependencies]

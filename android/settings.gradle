@@ -1,0 +1,2 @@
+rootProject.name='Punch Card'
+include ':app'
