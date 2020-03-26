@@ -1,8 +1,12 @@
+
 use std::os::raw::{c_char};
 use std::ffi::{CString};
 
 #[no_mangle]
 pub extern fn benchmarkCode() -> *mut c_char {
+    //call and time crypto code here
+    //write performance numbers to the string that gets returned
+
     CString::new("Hello".to_owned()).unwrap().into_raw()
 }
 
