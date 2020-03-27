@@ -18,7 +18,7 @@ pub struct PunchCard {
 	card_secret: [u8; 32], 
 	punch_card: RistrettoPoint,
 	last_mask: Scalar,
-	count: i32,
+	count: u32,
 }
 
 //notation from Figure 19.7 in Boneh-Shoup textbook v0.5
@@ -94,12 +94,12 @@ impl ServerData {
 		(new_card, proof)
 	}
 	
-	//check that the punch card is valid with 10 punches
+	//check that the punch card is valid with num_punches
 	//check that the punch card secret is new
-	pub fn server_verify(&mut self, card: CompressedRistretto, card_secret: [u8; 32]) -> bool {
+	pub fn server_verify(&mut self, card: CompressedRistretto, card_secret: [u8; 32], num_punches: u32) -> bool {
 		
-		let ten_punches = scalar_exponentiate(self.secret, 10);
-		let expected_card = RistrettoPoint::hash_from_bytes::<Sha512>(&card_secret) * ten_punches;
+		let num_punches = scalar_exponentiate(self.secret, num_punches);
+		let expected_card = RistrettoPoint::hash_from_bytes::<Sha512>(&card_secret) * num_punches;
 		
 		
 		if card == expected_card.compress() {
@@ -194,12 +194,11 @@ impl PunchCard {
 	pub fn unmask_redeem(&mut self) -> ([u8; 32], CompressedRistretto) {
 	
 		self.punch_card = self.punch_card * self.last_mask.invert();
-		self.count = -1; //mark this card as spent
 		
 		(self.card_secret, self.punch_card.compress())
 	}
 	
-	pub fn get_count(&self) -> i32 {
+	pub fn get_count(&self) -> u32 {
 		self.count
 	}
 }

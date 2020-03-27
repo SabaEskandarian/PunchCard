@@ -1,0 +1,56 @@
+Performance Results (computer)
+Each operation is repeated for 1000 iterations, except punches, which are done 10000 times (10 punches per iteration). 
+The server database starts with 0 used punchcards in each iteration. 
+Numbers are cumulative over all runs, in microseconds.
+Server setup: 18590
+Client setup: 65722
+Server punch: 1343669
+Client punch: 3123742
+Client redeem: 65837
+Server redeem: 64278
+
+so the averages are (in microseconds):
+Server setup: 18.590
+Client setup: 65.722
+Server punch: 134.3669
+Client punch: 312.3742
+Client redeem: 65.837
+Server redeem: 64.278
+
+When I increased the starting database size to 1M, I got these numbers
+Server setup: 27371
+Client setup: 85662
+Server punch: 1562951
+Client punch: 3497363
+Client redeem: 73585
+Server redeem: 72136
+The only one whose performance should be affected by the database size is server redeem, but it does not look different relative to the other numbers (the results are generally high variance). This is not surprising because the only DB-dependent operation is the hash table lookup. 
+
+
+Performance Results (Google Pixel)
+Each operation is repeated for 1000 iterations, except punches, which are done 10000 times (10 punches per iteration). 
+The server database starts with 0 used punchcards in each iteration. 
+Numbers are cumulative over all runs, in microseconds.
+Server setup: 304114
+Client setup: 939123
+Server punch: 19388147
+Client punch: 43142327
+Client redeem: 889866
+Server redeem: 949928
+
+so the averages are (in microseconds):
+Server setup: 304.114
+Client setup: 939.123
+Server punch: 1938.8147
+Client punch: 4314.2327
+Client redeem: 889.866
+Server redeem: 949.928
+
+
+Communication costs (for messages sent in protocol)
+Server setup: 32 bytes (g^secret)
+Client setup: none
+Client punch: 32 bytes (the punchcard group element)
+Server punch: 128 bytes (new group element and proof which has 2 group elements and a scalar, 32 bytes each)
+Client redeem: 64 bytes (the final card and the secret used to make the card, 32 bytes each)
+Server redeem: none
