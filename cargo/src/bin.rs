@@ -1,4 +1,4 @@
-mod lib; mod crypto;
+mod lib;
 
 use std::ffi::{CString};
 
