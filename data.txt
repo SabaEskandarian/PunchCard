@@ -1,3 +1,5 @@
+Punch card scheme with curve25519-dalek
+
 Performance Results (computer)
 Each operation is repeated for 1000 iterations, except punches, which are done 10000 times (10 punches per iteration). 
 The server database starts with 0 used punchcards in each iteration. 
@@ -54,3 +56,13 @@ Client punch: 32 bytes (the punchcard group element)
 Server punch: 128 bytes (new group element and proof which has 2 group elements and a scalar, 32 bytes each)
 Client redeem: 64 bytes (the final card and the secret used to make the card, 32 bytes each)
 Server redeem: none
+
+
+Time for lookup in hashset of 1 million entries is <1 microsecond (about .2-.3 microseconds)
+Time for exponentiation is about 50 microseconds (usually between 50 and 55)
+so to do 1M exponentiations (one for each previously used card) would probably be about 50 seconds. The speedup is about 8 orders of magnitude. 
+
+Punch card scheme with pairing-plus (BLS12-381) 
+
+TODO
+

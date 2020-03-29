@@ -121,6 +121,10 @@ impl ServerData {
 			self.used_cards.insert(temp);
 		}
 	}
+	
+	pub fn lookup_test(&self, input: [u8; 32]) -> bool {
+        self.used_cards.contains(&input)
+	}
 }
 
 
@@ -200,6 +204,10 @@ impl PunchCard {
 	
 	pub fn get_count(&self) -> u32 {
 		self.count
+	}
+	
+	pub fn exp_test(&self) -> RistrettoPoint{
+        self.punch_card * self.last_mask
 	}
 }
 
