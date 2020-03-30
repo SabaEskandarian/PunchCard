@@ -50,6 +50,7 @@ name = "cargo"
 version = "0.1.0"
 dependencies = [
  "curve25519-dalek",
+ "ff-zeroize",
  "jni",
  "pairing-plus",
  "rand 0.7.3",

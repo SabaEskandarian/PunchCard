@@ -210,4 +210,3 @@ impl PunchCard {
         self.punch_card * self.last_mask
 	}
 }
-
