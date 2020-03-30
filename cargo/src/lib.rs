@@ -150,7 +150,11 @@ pub extern fn benchmarkCode() -> *mut c_char {
             
                 perf_string = "Performance Results for hashset lookup and exponentiation (nanoseconds)\n";
         },
-        Tests::Pairing => { //TODO: similar to the group code above, but for the pairing version
+        Tests::Pairing => { 
+            //TODO: similar to the group code above, but for the pairing version
+            //we will create 2 cards and punch each 5 times, then merge them to redeem
+            
+            
             
         },
     }

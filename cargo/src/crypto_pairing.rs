@@ -8,6 +8,7 @@ use pairing_plus::Engine;
 use pairing_plus::hash_to_field::ExpandMsgXmd;
 use pairing_plus::CurveProjective;
 use pairing_plus::serdes::SerDes;
+use pairing_plus::hash_to_field::hash_to_field;
 use pairing_plus::hash_to_curve::HashToCurve;
 use pairing_plus::bls12_381::Bls12;
 use pairing_plus::bls12_381::Fr;
@@ -50,12 +51,12 @@ pub struct PairPunchCardPart<T> {
 pub struct PairProof {
 	v_t: Vec<u8>,//compressed points in G1 or G2 (depending on proof)
 	w_t: Vec<u8>,
-	beta_z: Fr,
+	beta_z: Vec<u8>,//compressed point in Fr
 }
 
 impl PairServerData {
 
-	//set up the server secret and redeemed card db
+	//set up the server secret and redeemed card 
     pub fn pair_server_setup() -> (Vec<u8>, Vec<u8>, PairServerData){
         let secret = Fr::random(&mut OsRng);
 		let used_cards = HashSet::new();
@@ -76,31 +77,85 @@ impl PairServerData {
         (pub_secret_g1, pub_secret_g2, new_server)
     }
     
-    //punch card by multiplying by secret
-	//prove that this was done honestly
-    pub fn pair_server_punch() { //TODO (this should take a generic type to apply for both G1 and G2)
-    
+    pub fn pair_server_punch(&self, compressed_card1: &mut Vec<u8>, compressed_card2: &mut Vec<u8>) -> (Vec<u8>, Vec<u8>, PairProof, PairProof)  {
+            let dst1 = [3u8, 0u8, 0u8, 0u8];
+            let dst2 = [4u8, 0u8, 0u8, 0u8];
+            
+            let (card1, proof1) = self.pair_server_punch_part::<G1>(compressed_card1, dst1);
+            let (card2, proof2) = self.pair_server_punch_part::<G2>(compressed_card2, dst2);
+            
+            (card1, card2, proof1, proof2)
     }
     
-    /*
-    	pub fn server_verify(&mut self, card: CompressedRistretto, card_secret: [u8; 32], num_punches: u32) -> bool {
+    //this will have to be called twice, once for each piece of the card
+    //dst is also 3,0,0,0 the first time and 4,0,0,0 the second time
+    //punch card by multiplying by secret
+	//prove that this was done honestly
+    fn pair_server_punch_part<T>(&self, compressed_card: &mut Vec<u8>, dst: [u8; 4]) -> (Vec<u8>, PairProof) 
+        where T: CurveProjective + SerDes,
+        <<T as pairing_plus::CurveProjective>::Scalar as ff_zeroize::PrimeField>::Repr: std::convert::From<pairing_plus::bls12_381::Fr>
+    { 
+    
+        let pub_secret: &[u8];
+        if dst[0] == 3 {
+            pub_secret = &self.pub_secret_g1;
+        } else if dst[0] == 4 {
+            pub_secret = &self.pub_secret_g2;
+        } else {
+            panic!("bad dst");
+        }
+    
+        //deserialize the card given as parameter
+        let card = T::deserialize(&mut &compressed_card[..], true).expect("couldn't deserialize");
+        let mut new_card = card.clone();
+        new_card.mul_assign(self.secret);
+        let mut new_compressed_card = Vec::<u8>::new();
+        new_card.serialize(&mut new_compressed_card, true).expect("couldn't serialize");
+        
+        //generate Chaum-Pedersen proof
+		//see Boneh Shoup textbook v0.5 Figure 19.7
+        let beta_t = Fr::random(&mut OsRng);
+        let mut v_t = T::one();
+        v_t.mul_assign(beta_t);
+        let mut v_t_compressed = Vec::<u8>::new();
+        v_t.serialize(&mut v_t_compressed, true).expect("couldn't serialize");
+        
+        let mut w_t = card.clone();
+        w_t.mul_assign(beta_t);
+        let mut w_t_compressed = Vec::<u8>::new();
+        w_t.serialize(&mut w_t_compressed, true).expect("couldn't serialize");
+        
+		let mut hashinput: Vec<u8> = Vec::new();
+		hashinput.extend_from_slice(pub_secret);
+		hashinput.extend_from_slice(&compressed_card);
+		hashinput.extend_from_slice(&new_compressed_card);
+		hashinput.extend_from_slice(&v_t_compressed);
+		hashinput.extend_from_slice(&w_t_compressed);
+		let hashinput_bytes: &[u8] = &hashinput;
 		
-		let num_punches = scalar_exponentiate(self.secret, num_punches);
-		let expected_card = RistrettoPoint::hash_from_bytes::<Sha512>(&card_secret) * num_punches;
+		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha512>>(hashinput_bytes, &dst, 1)[0];
 		
+		let mut beta_z = chal;
+		beta_z.mul_assign(&self.secret);
+		beta_z.add_assign(&beta_t);
 		
-		if card == expected_card.compress() {
-			//returns true if this was not in the set
-			self.used_cards.insert(card_secret)
-		} else {
-			false
-		}
-	}
-    */
+        let mut beta_z_compressed = Vec::<u8>::new();
+        beta_z.serialize(&mut beta_z_compressed, true).expect("couldn't serialize");
+				
+		let proof = PairProof {
+			v_t: v_t_compressed,
+			w_t: w_t_compressed,
+			beta_z: beta_z_compressed,
+		};
+		
+		(new_compressed_card, proof)
+        
+    }
+    
     
 	//check that the punch card is valid with num_punches
 	//check that the punch card secret is new
-    pub fn pair_server_verify(&mut self, compressed_card1: &mut Vec<u8>, compressed_card2: &mut Vec<u8>, secret1: [u8; 32], secret2: [u8; 32], num_punches: u32) -> bool { //TODO
+    pub fn pair_server_verify(&mut self, compressed_card1: &mut Vec<u8>, compressed_card2: &mut Vec<u8>, secret1: [u8; 32], secret2: [u8; 32], num_punches: u32) -> bool {
     
         let csuite1 = [0u8; 4];
         let csuite2 = [1u8, 0u8, 0u8, 0u8];
@@ -194,23 +249,86 @@ impl PairPunchCard {
         let mut card_compressed = Vec::<u8>::new();
         new_punch_card.punch_card.serialize(&mut card_compressed, true).expect("couldn't serialize");
 
-
         (card_compressed, new_punch_card)
 		
+	}
+	
+	pub fn verify_remask(&mut self, compressed_card1: Vec<u8>, compressed_card2: Vec<u8>, pub_secret_g1: Vec<u8>, pub_secret_g2: Vec<u8>, proof1: PairProof, proof2: PairProof) -> (Vec<u8>, Vec<u8>, bool) {
+	
+            let dst1 = [3u8, 0u8, 0u8, 0u8];
+            let dst2 = [4u8, 0u8, 0u8, 0u8];
+            
+            let (card1, success1) = Self::verify_remask_part::<G1>(&mut self.g1card, compressed_card1, pub_secret_g1, proof1, dst1);
+            let (card2, success2) = Self::verify_remask_part::<G2>(&mut self.g2card, compressed_card2, pub_secret_g2, proof2, dst2);
+            
+            if success1 != success2 {panic!("success values don't match");}
+            
+            (card1, card2, success1)
 	}
 	
 	//verify proof from the server
 	//if accepted, unmask punchcard, remask with new mask, increment count
 	//otherwise reuse old punchcard, same count
-	pub fn verify_remask(&mut self) { //TODO
-
-	}
+	fn verify_remask_part<T>(card: &mut PairPunchCardPart<T>, new_compressed_card: Vec<u8>, pub_secret: Vec<u8>, proof: PairProof, dst: [u8; 4]) -> (Vec<u8>, bool) 
+        where T: CurveProjective + SerDes,
+        <<T as pairing_plus::CurveProjective>::Scalar as ff_zeroize::PrimeField>::Repr: std::convert::From<pairing_plus::bls12_381::Fr>
+	{
 	
-	/*
-			self.punch_card = self.punch_card * self.last_mask.invert();
+        //serialize the punch card so it can be used here
+        let mut compressed_card = Vec::<u8>::new();
+        card.punch_card.serialize(&mut compressed_card, true).expect("couldn't serialize");
+	
+        //verify Chaum-Pedersen proof
+		//see Boneh Shoup textbook v0.5 Figure 19.7
+		let mut hashinput: Vec<u8> = Vec::new();
+		hashinput.extend_from_slice(&pub_secret);
+		hashinput.extend_from_slice(&compressed_card);
+		hashinput.extend_from_slice(&new_compressed_card);
+		hashinput.extend_from_slice(&proof.v_t);
+		hashinput.extend_from_slice(&proof.w_t);
+		let hashinput_bytes: &[u8] = &hashinput;
+		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha512>>(hashinput_bytes, &dst, 1)[0];
 		
-		(self.card_secret, self.punch_card.compress())
-	*/
+		//decompress proof elements and remaining inputs
+		let pub_secret = T::deserialize(&mut &pub_secret[..], true).expect("couldn't deserialize");
+        let v_t = T::deserialize(&mut &proof.v_t[..], true).expect("couldn't deserialize");
+		let w_t = T::deserialize(&mut &proof.w_t[..], true).expect("couldn't deserialize");
+		let mut new_card = T::deserialize(&mut &new_compressed_card[..], true).expect("couldn't deserialize");
+        let beta_z = Fr::deserialize(&mut &proof.beta_z[..], true).expect("couldn't deserialize");
+
+		let mut gbz = T::one();
+		gbz.mul_assign(beta_z);
+        
+        let mut vtvc = v_t;
+        let mut part = pub_secret;
+        part.mul_assign(chal);
+        vtvc.add_assign(&part);
+        
+        let mut ubz = card.punch_card;
+        ubz.mul_assign(beta_z);
+        
+        let mut wtwc = w_t;
+        let mut part = new_card;
+        part.mul_assign(chal);
+        wtwc.add_assign(&part);
+        
+        let mut success = true;
+        if gbz == vtvc && ubz == wtwc {
+            new_card.mul_assign(card.last_mask.inverse().expect("couldn't invert!"));
+            card.last_mask = Fr::random(&mut OsRng);
+            new_card.mul_assign(card.last_mask);
+            card.punch_card = new_card;
+            card.count += 1;
+        } else {
+            success = false;
+        }
+        
+        //serialize new card
+        let mut new_card_compressed = Vec::<u8>::new();
+        new_card.serialize(&mut new_card_compressed, true).expect("couldn't serialize");
+        
+        (new_card_compressed, success)
+	}
 	
 	//unmask the punch card, use pairings to merge, and return relevant contents
 	pub fn pair_unmask_redeem(&mut self, mut other: PairPunchCard) -> ([u8; 32], [u8; 32], Vec<u8>, Vec<u8>) {
@@ -220,7 +338,6 @@ impl PairPunchCard {
         self.g2card.punch_card.mul_assign(self.g2card.last_mask.inverse().expect("couldn't invert!"));
         other.g1card.punch_card.mul_assign(other.g1card.last_mask.inverse().expect("couldn't invert!"));
         other.g2card.punch_card.mul_assign(other.g2card.last_mask.inverse().expect("couldn't invert!"));
-
         
         //pairings of the parts of the punch cards
         let pairing1 = Bls12::pairing(self.g1card.punch_card, other.g2card.punch_card);
