@@ -5,6 +5,8 @@ use std::os::raw::{c_char};
 use std::ffi::{CString};
 use crypto::ServerData;
 use crypto::PunchCard;
+use crypto_pairing::PairServerData;
+use crypto_pairing::PairPunchCard;
 use std::time::Instant;
 use curve25519_dalek::scalar::Scalar;
 use rand::Rng;
@@ -37,10 +39,10 @@ pub extern fn benchmarkCode() -> *mut c_char {
 
     
     let mut times = Times {
-    	num_iterations: 1000, //how many iterations to average over
-    	num_punches: 10, //how many punches before a card is redeemed
-    	setup_rows: 1000000, //change to larger number to test with used cards in db
-    	test_type: Tests::Lookup,
+    	num_iterations: 100, //how many iterations to average over
+    	num_punches: 10, //how many punches before a card is redeemed, must be even for the pairing version test code
+    	setup_rows: 0, //change to larger number to test with used cards in db, also make this larger for the lookup test
+    	test_type: Tests::Pairing,
     	server_setup: 0,
  		client_setup: 0,
 		server_punch: 0,
@@ -49,7 +51,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
 		server_redeem: 0,
     };
 
-    let mut perf_string = "";
+    let perf_string: &str;
     
     match times.test_type {
         Tests::Group => {
@@ -151,9 +153,109 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 perf_string = "Performance Results for hashset lookup and exponentiation (nanoseconds)\n";
         },
         Tests::Pairing => { 
-            //TODO: similar to the group code above, but for the pairing version
+            //similar to the group code above, but for the pairing version
             //we will create 2 cards and punch each 5 times, then merge them to redeem
+                for j in 0..times.num_iterations {
+                if j % 10 == 0 {println!("10 more done!\n");}
             
+                //set up server
+                let now = Instant::now();
+                let (pub_secret_g1, pub_secret_g2, mut server) = PairServerData::pair_server_setup();
+                let elapsed = now.elapsed().as_micros();
+                //println!("time elapsed in server setup: {}", elapsed);
+                times.server_setup += elapsed;
+                
+                //fill up database of used cards
+                //double because each card is actually 2 cards
+                server.pair_cheat_setup_db(2*times.setup_rows);
+                
+                //println!("number of used punchcards: {}", server.count_cards());
+                
+                //create new punchcard
+                let now = Instant::now();
+                let (mut current_card_g1, mut current_card_g2, mut client) = PairPunchCard::card_setup();
+                let elapsed = now.elapsed().as_micros();
+                //println!("time elapsed in punchcard setup: {}", elapsed);
+                times.client_setup += elapsed;
+                
+                //create a second card that's going to be merged with the first
+                let (mut second_current_card_g1, mut second_current_card_g2, mut second_client) = PairPunchCard::card_setup();
+                
+                
+                //punch the first card
+                for i in 0..times.num_punches/2 {
+                    
+                    //server punches
+                    let now = Instant::now();
+                    let (new_card_g1, new_card_g2, proof_g1, proof_g2) = server.pair_server_punch(&mut current_card_g1, &mut current_card_g2);
+                    let elapsed = now.elapsed().as_micros();
+                    //println!("time elapsed in server punch: {}", elapsed);
+                    times.server_punch += elapsed;
+                
+                    //client verifies punch, prepares for next punch	
+                    let now = Instant::now();
+                    let res = client.verify_remask(new_card_g1, new_card_g2, &pub_secret_g1, &pub_secret_g2, proof_g1, proof_g2);
+                    current_card_g1 = res.0;
+                    current_card_g2 = res.1;
+                    let punch_success = res.2;
+                    let elapsed = now.elapsed().as_micros();
+                    if !punch_success {panic!("punch failed");}
+                    //println!("time elapsed in client punch: {}", elapsed);
+                    times.client_punch += elapsed;
+                
+                    //println!("punch succeeded? {}", punch_success);
+                    //println!("punch count: {}", client.get_count());	
+                    if client.pair_get_count() != i+1 {panic!("first punch count wrong");}
+                }
+                //punch the second card
+                for i in 0..times.num_punches/2 {
+                    
+                    //server punches
+                    let now = Instant::now();
+                    let (new_card_g1, new_card_g2, proof_g1, proof_g2) = server.pair_server_punch(&mut second_current_card_g1, &mut second_current_card_g2);
+                    let elapsed = now.elapsed().as_micros();
+                    //println!("time elapsed in server punch: {}", elapsed);
+                    times.server_punch += elapsed;
+                
+                    //client verifies punch, prepares for next punch	
+                    let now = Instant::now();
+                    let res = second_client.verify_remask(new_card_g1, new_card_g2, &pub_secret_g1, &pub_secret_g2, proof_g1, proof_g2);
+                    second_current_card_g1 = res.0;
+                    second_current_card_g2 = res.1;
+                    let punch_success = res.2;
+                    let elapsed = now.elapsed().as_micros();
+                    if !punch_success {panic!("punch failed");}
+                    //println!("time elapsed in client punch: {}", elapsed);
+                    times.client_punch += elapsed;
+                
+                    //println!("punch succeeded? {}", punch_success);
+                    //println!("punch count: {}", client.get_count());	
+                    if second_client.pair_get_count() != i+1 {panic!("second punch count wrong");}
+                }
+
+                
+                //client redeems card
+                let now = Instant::now();
+                let (card_secret, second_card_secret, mut final_card, mut second_final_card) = client.pair_unmask_redeem(second_client);
+                let elapsed = now.elapsed().as_micros();
+                //println!("time elapsed in redemption (client): {}", elapsed);
+                times.client_redeem += elapsed;
+                
+                //server verifies card
+                let now = Instant::now();
+                let redeem_success = server.pair_server_verify(&mut final_card, &mut second_final_card, card_secret, second_card_secret, times.num_punches);
+                if !redeem_success {panic!("redemption failed");}
+                let elapsed = now.elapsed().as_micros();
+                //println!("time elapsed in redemption (server): {}", elapsed);
+                times.server_redeem += elapsed;
+                
+                //println!("card redemption succeeded? {}", redeem_success);
+                //println!("number of used punchcards: {}", server.count_cards());
+                if server.pair_count_cards() != (2*times.setup_rows + 2) as usize {panic!("wrong number of rows in card database");}
+                
+            }
+            
+            perf_string = "Performance Results for BLS12_381 group with merging\n";
             
             
         },

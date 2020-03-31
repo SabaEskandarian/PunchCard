@@ -253,7 +253,7 @@ impl PairPunchCard {
 		
 	}
 	
-	pub fn verify_remask(&mut self, compressed_card1: Vec<u8>, compressed_card2: Vec<u8>, pub_secret_g1: Vec<u8>, pub_secret_g2: Vec<u8>, proof1: PairProof, proof2: PairProof) -> (Vec<u8>, Vec<u8>, bool) {
+	pub fn verify_remask(&mut self, compressed_card1: Vec<u8>, compressed_card2: Vec<u8>, pub_secret_g1: &Vec<u8>, pub_secret_g2: &Vec<u8>, proof1: PairProof, proof2: PairProof) -> (Vec<u8>, Vec<u8>, bool) {
 	
             let dst1 = [3u8, 0u8, 0u8, 0u8];
             let dst2 = [4u8, 0u8, 0u8, 0u8];
@@ -269,7 +269,7 @@ impl PairPunchCard {
 	//verify proof from the server
 	//if accepted, unmask punchcard, remask with new mask, increment count
 	//otherwise reuse old punchcard, same count
-	fn verify_remask_part<T>(card: &mut PairPunchCardPart<T>, new_compressed_card: Vec<u8>, pub_secret: Vec<u8>, proof: PairProof, dst: [u8; 4]) -> (Vec<u8>, bool) 
+	fn verify_remask_part<T>(card: &mut PairPunchCardPart<T>, new_compressed_card: Vec<u8>, pub_secret: &Vec<u8>, proof: PairProof, dst: [u8; 4]) -> (Vec<u8>, bool) 
         where T: CurveProjective + SerDes,
         <<T as pairing_plus::CurveProjective>::Scalar as ff_zeroize::PrimeField>::Repr: std::convert::From<pairing_plus::bls12_381::Fr>
 	{
@@ -281,7 +281,7 @@ impl PairPunchCard {
         //verify Chaum-Pedersen proof
 		//see Boneh Shoup textbook v0.5 Figure 19.7
 		let mut hashinput: Vec<u8> = Vec::new();
-		hashinput.extend_from_slice(&pub_secret);
+		hashinput.extend_from_slice(pub_secret);
 		hashinput.extend_from_slice(&compressed_card);
 		hashinput.extend_from_slice(&new_compressed_card);
 		hashinput.extend_from_slice(&proof.v_t);
