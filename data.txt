@@ -68,39 +68,39 @@ Performance Results for BLS12_381 group with merging (computer)
 Each operation is repeated for 100 iterations, except punches, which are done 1000 times (10 punches per iteration). 
 The server database starts with 0 used punchcards in each iteration. 
 Numbers are cumulative over all runs, in microseconds.
-Server setup: 133375
-Client setup: 355231
-Server punch: 5291851
-Client punch: 13280804
-Client redeem: 750894
-Server redeem: 981779
+Server setup: 107001
+Client setup: 280941
+Server punch: 4314012
+Client punch: 10839281
+Client redeem: 610790
+Server redeem: 796773
 
 so the averages are (in _milliseconds_):
-Server setup: 1.33
-Client setup: 3.55
-Server punch: 5.29
-Client punch: 13.28
-Client redeem: 7.51
-Server redeem: 9.82
+Server setup: 1.07
+Client setup: 2.81
+Server punch: 4.31
+Client punch: 10.84
+Client redeem: 6.11
+Server redeem: 7.97
 
 Performance Results for BLS12_381 group with merging (Google Pixel)
 Each operation is repeated for 100 iterations, except punches, which are done 1000 times (10 punches per iteration). 
 The server database starts with 0 used punchcards in each iteration. 
 Numbers are cumulative over all runs, in microseconds.
-Server setup: 1360594
-Client setup: 3541496
-Server punch: 55005599
-Client punch: 139403237
-Client redeem: 7331548
-Server redeem: 9725082
+Server setup: 1341705
+Client setup: 3506129
+Server punch: 54462305
+Client punch: 137825784
+Client redeem: 7240516
+Server redeem: 9593094
 
 so the averages are (in _milliseconds_):
-Server setup: 13.61
-Client setup: 35.41
-Server punch: 55.01
-Client punch: 139.40
-Client redeem: 73.32
-Server redeem: 97.25
+Server setup: 13.42
+Client setup: 35.06
+Server punch: 54.46
+Client punch: 137.83
+Client redeem: 72.4
+Server redeem: 95.93
 
 Communication costs (for messages sent in protocol)
 Server setup: 144 bytes (g^secret for both groups == 48 + 96)

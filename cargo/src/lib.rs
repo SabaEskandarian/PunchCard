@@ -128,15 +128,19 @@ pub extern fn benchmarkCode() -> *mut c_char {
             perf_string = "Performance Results for 25519 group\n";
         },
         Tests::Lookup => {
+            //mostly using this as scratch space for miscellaneous experiments
             let (_, mut server) = ServerData::server_setup();
             server.cheat_setup_db(times.setup_rows);
             let (_, client) = PunchCard::card_setup();
             let mut rng = rand::thread_rng();
             
+            let (_, _, mut pairing_client) = PairPunchCard::card_setup();
+            
             for _ in 0..times.num_iterations {
                 let x:u32 = rng.gen_range(0, times.setup_rows);
                 let val = Scalar::from(x).to_bytes();
 
+                
                 let now = Instant::now();
                 let there = server.lookup_test(val);
                 let elapsed = now.elapsed().as_nanos();
@@ -144,13 +148,26 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 times.server_setup += elapsed;
                 if !there {panic!("wasn't there!");}
                 
+                
                 let now = Instant::now();
                 let _res = client.exp_test();
-                let elapsed = now.elapsed().as_nanos();
+                let elapsed = now.elapsed().as_micros();
                 times.client_setup += elapsed;
+                
+                
+                
+                let now = Instant::now();
+                let _res = pairing_client.exp_test_g1();
+                let elapsed = now.elapsed().as_micros();
+                times.client_redeem += elapsed;
+                
+                let now = Instant::now();
+                let _res = pairing_client.exp_test_g2();
+                let elapsed = now.elapsed().as_micros();
+                times.server_redeem += elapsed;
             }
             
-                perf_string = "Performance Results for hashset lookup and exponentiation (nanoseconds)\n";
+                perf_string = "Performance Results for misc experiment\n";
         },
         Tests::Pairing => { 
             //similar to the group code above, but for the pairing version
@@ -160,7 +177,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
             
                 //set up server
                 let now = Instant::now();
-                let (pub_secret_g1, pub_secret_g2, mut server) = PairServerData::pair_server_setup();
+                let mut server = PairServerData::pair_server_setup();
                 let elapsed = now.elapsed().as_micros();
                 //println!("time elapsed in server setup: {}", elapsed);
                 times.server_setup += elapsed;
@@ -194,7 +211,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 
                     //client verifies punch, prepares for next punch	
                     let now = Instant::now();
-                    let res = client.verify_remask(new_card_g1, new_card_g2, &pub_secret_g1, &pub_secret_g2, proof_g1, proof_g2);
+                    let res = client.verify_remask(new_card_g1, new_card_g2, &server.pub_secret_g1, &server.pub_secret_g2, proof_g1, proof_g2);
                     current_card_g1 = res.0;
                     current_card_g2 = res.1;
                     let punch_success = res.2;
@@ -219,7 +236,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 
                     //client verifies punch, prepares for next punch	
                     let now = Instant::now();
-                    let res = second_client.verify_remask(new_card_g1, new_card_g2, &pub_secret_g1, &pub_secret_g2, proof_g1, proof_g2);
+                    let res = second_client.verify_remask(new_card_g1, new_card_g2, &server.pub_secret_g1, &server.pub_secret_g2, proof_g1, proof_g2);
                     second_current_card_g1 = res.0;
                     second_current_card_g2 = res.1;
                     let punch_success = res.2;

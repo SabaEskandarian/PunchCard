@@ -1,4 +1,5 @@
-use sha2::Sha512;
+//use sha2::Sha512;
+use sha2::Sha256;
 use rand_core::{RngCore, OsRng};
 use std::collections::HashSet;
 use curve25519_dalek::scalar::Scalar;
@@ -25,8 +26,8 @@ use pairing_plus::bls12_381::Fq12;
 pub struct PairServerData {
 	secret: Fr,
 	used_cards: HashSet<[u8; 32]>,
-	pub_secret_g1: Vec<u8>, //compressed form of g1^secret
-	pub_secret_g2: Vec<u8>, //compressed form of g2^secret
+	pub pub_secret_g1: Vec<u8>, //compressed form of g1^secret
+	pub pub_secret_g2: Vec<u8>, //compressed form of g2^secret
 }
 
 //this holds the two parts of one punch card
@@ -57,7 +58,7 @@ pub struct PairProof {
 impl PairServerData {
 
 	//set up the server secret and redeemed card 
-    pub fn pair_server_setup() -> (Vec<u8>, Vec<u8>, PairServerData){
+    pub fn pair_server_setup() -> PairServerData{
         let secret = Fr::random(&mut OsRng);
 		let used_cards = HashSet::new();
         let mut pub_secret_g1 = Vec::<u8>::new();
@@ -71,10 +72,10 @@ impl PairServerData {
         let new_server = PairServerData {
             secret,
             used_cards,
-            pub_secret_g1: pub_secret_g1.clone(),
-            pub_secret_g2: pub_secret_g2.clone(),
+            pub_secret_g1,
+            pub_secret_g2,
         };
-        (pub_secret_g1, pub_secret_g2, new_server)
+        new_server
     }
     
     pub fn pair_server_punch(&self, compressed_card1: &mut Vec<u8>, compressed_card2: &mut Vec<u8>) -> (Vec<u8>, Vec<u8>, PairProof, PairProof)  {
@@ -133,7 +134,7 @@ impl PairServerData {
 		hashinput.extend_from_slice(&w_t_compressed);
 		let hashinput_bytes: &[u8] = &hashinput;
 		
-		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha512>>(hashinput_bytes, &dst, 1)[0];
+		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha256>>(hashinput_bytes, &dst, 1)[0];
 		
 		let mut beta_z = chal;
 		beta_z.mul_assign(&self.secret);
@@ -163,10 +164,10 @@ impl PairServerData {
     
         //compute the values and pairings you would expect
         let num_punches = self.secret.pow([num_punches as u64]);
-        let mut expcard_1_1 = <G1 as HashToCurve<ExpandMsgXmd<Sha512>>>::hash_to_curve(&secret1, &csuite1);
-        let expcard_1_2 = <G2 as HashToCurve<ExpandMsgXmd<Sha512>>>::hash_to_curve(&secret1, &csuite2);
-        let mut expcard_2_1 = <G1 as HashToCurve<ExpandMsgXmd<Sha512>>>::hash_to_curve(&secret2, &csuite1);
-        let expcard_2_2 = <G2 as HashToCurve<ExpandMsgXmd<Sha512>>>::hash_to_curve(&secret2, &csuite2);
+        let mut expcard_1_1 = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(&secret1, &csuite1);
+        let expcard_1_2 = <G2 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(&secret1, &csuite2);
+        let mut expcard_2_1 = <G1 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(&secret2, &csuite1);
+        let expcard_2_2 = <G2 as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(&secret2, &csuite2);
         
         expcard_1_1.mul_assign(num_punches);
         expcard_2_1.mul_assign(num_punches);
@@ -231,13 +232,13 @@ impl PairPunchCard {
 	//create a new punchcard part
 	//punch card is already masked after this function
 	fn card_part_setup<T>(card_secret: [u8; 32], csuite: [u8; 4]) -> (Vec<u8>, PairPunchCardPart::<T>) 
-        where T: CurveProjective + SerDes + HashToCurve<ExpandMsgXmd<Sha512>>,
+        where T: CurveProjective + SerDes + HashToCurve<ExpandMsgXmd<Sha256>>,
               <<T as CurveProjective>::Scalar as PrimeField>::Repr: std::convert::From<Fr>
     {
 		
         let last_mask = Fr::random(&mut OsRng);
         
-        let mut punch_card = <T as HashToCurve<ExpandMsgXmd<Sha512>>>::hash_to_curve(&card_secret, &csuite);
+        let mut punch_card = <T as HashToCurve<ExpandMsgXmd<Sha256>>>::hash_to_curve(&card_secret, &csuite);
         punch_card.mul_assign(last_mask);
         
         let new_punch_card = PairPunchCardPart::<T> {
@@ -288,7 +289,7 @@ impl PairPunchCard {
 		hashinput.extend_from_slice(&proof.v_t);
 		hashinput.extend_from_slice(&proof.w_t);
 		let hashinput_bytes: &[u8] = &hashinput;
-		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha512>>(hashinput_bytes, &dst, 1)[0];
+		let chal = hash_to_field::<Fr, ExpandMsgXmd<Sha256>>(hashinput_bytes, &dst, 1)[0];
 		
 		//decompress proof elements and remaining inputs
 		let pub_secret = T::deserialize(&mut &pub_secret[..], true).expect("couldn't deserialize");
@@ -360,6 +361,16 @@ impl PairPunchCard {
 		if self.g1card.count != self.g2card.count {panic!("card counts misaligned!")}
 		
 		self.g1card.count
+	}
+	
+    pub fn exp_test_g1(&mut self) -> G1{
+        self.g1card.punch_card.mul_assign(self.g1card.last_mask);
+        self.g1card.punch_card
+	}
+	
+    pub fn exp_test_g2(&mut self) -> G2{
+        self.g2card.punch_card.mul_assign(self.g2card.last_mask);
+        self.g2card.punch_card
 	}
 
 }
