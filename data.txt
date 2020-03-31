@@ -101,3 +101,11 @@ Server punch: 55.01
 Client punch: 139.40
 Client redeem: 73.32
 Server redeem: 97.25
+
+Communication costs (for messages sent in protocol)
+Server setup: 144 bytes (g^secret for both groups == 48 + 96)
+Client setup: none
+Client punch: 144 bytes (the 2 punchcard group elements)
+Server punch: 496 bytes (2 new group elements and 2 proofs which have 2 group elements and a scalar = 144 + (96 + 32) + (192 + 32) = 496)
+Client redeem: 1,216 bytes (the final cards and the secrets used to make the cards, 32 bytes each secret, 576 bytes each final card)
+Server redeem: none

@@ -42,7 +42,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
     	num_iterations: 100, //how many iterations to average over
     	num_punches: 10, //how many punches before a card is redeemed, must be even for the pairing version test code
     	setup_rows: 0, //change to larger number to test with used cards in db, also make this larger for the lookup test
-    	test_type: Tests::Pairing,
+    	test_type: Tests::Group,
     	server_setup: 0,
  		client_setup: 0,
 		server_punch: 0,

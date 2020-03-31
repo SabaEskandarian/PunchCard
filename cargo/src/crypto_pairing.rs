@@ -142,6 +142,7 @@ impl PairServerData {
         let mut beta_z_compressed = Vec::<u8>::new();
         beta_z.serialize(&mut beta_z_compressed, true).expect("couldn't serialize");
 				
+		//println!("size of Fr compressed: {}", beta_z_compressed.len());//it's 32
 		let proof = PairProof {
 			v_t: v_t_compressed,
 			w_t: w_t_compressed,
