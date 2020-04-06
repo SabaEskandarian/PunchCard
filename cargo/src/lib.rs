@@ -39,7 +39,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
 
     
     let mut times = Times {
-    	num_iterations: 100, //how many iterations to average over
+    	num_iterations: 1000, //how many iterations to average over
     	num_punches: 10, //how many punches before a card is redeemed, must be even for the pairing version test code
     	setup_rows: 0, //change to larger number to test with used cards in db, also make this larger for the lookup test
     	test_type: Tests::Group,
@@ -253,14 +253,14 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 
                 //client redeems card
                 let now = Instant::now();
-                let (card_secret, second_card_secret, mut final_card, mut second_final_card) = client.pair_unmask_redeem(second_client);
+                let (card_secret, second_card_secret, mut final_card) = client.pair_unmask_redeem(second_client);
                 let elapsed = now.elapsed().as_micros();
                 //println!("time elapsed in redemption (client): {}", elapsed);
                 times.client_redeem += elapsed;
                 
                 //server verifies card
                 let now = Instant::now();
-                let redeem_success = server.pair_server_verify(&mut final_card, &mut second_final_card, card_secret, second_card_secret, times.num_punches);
+                let redeem_success = server.pair_server_verify(&mut final_card, card_secret, second_card_secret, times.num_punches);
                 if !redeem_success {panic!("redemption failed");}
                 let elapsed = now.elapsed().as_micros();
                 //println!("time elapsed in redemption (server): {}", elapsed);

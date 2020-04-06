@@ -68,44 +68,44 @@ Performance Results for BLS12_381 group with merging (computer)
 Each operation is repeated for 100 iterations, except punches, which are done 1000 times (10 punches per iteration). 
 The server database starts with 0 used punchcards in each iteration. 
 Numbers are cumulative over all runs, in microseconds.
-Server setup: 107001
-Client setup: 280941
-Server punch: 4314012
-Client punch: 10839281
-Client redeem: 610790
-Server redeem: 796773
+Server setup: 109839
+Client setup: 278976
+Server punch: 4327845
+Client punch: 10851089
+Client redeem: 305215
+Server redeem: 400271
 
 so the averages are (in _milliseconds_):
-Server setup: 1.07
-Client setup: 2.81
-Server punch: 4.31
-Client punch: 10.84
-Client redeem: 6.11
-Server redeem: 7.97
+Server setup: 1.09
+Client setup: 2.79
+Server punch: 4.33
+Client punch: 10.85
+Client redeem: 3.05
+Server redeem: 4.00
 
 Performance Results for BLS12_381 group with merging (Google Pixel)
 Each operation is repeated for 100 iterations, except punches, which are done 1000 times (10 punches per iteration). 
 The server database starts with 0 used punchcards in each iteration. 
 Numbers are cumulative over all runs, in microseconds.
-Server setup: 1341705
-Client setup: 3506129
-Server punch: 54462305
-Client punch: 137825784
-Client redeem: 7240516
-Server redeem: 9593094
+Server setup: 1332493
+Client setup: 3496631
+Server punch: 54449731
+Client punch: 137793866
+Client redeem: 3643494
+Server redeem: 4810848
 
 so the averages are (in _milliseconds_):
-Server setup: 13.42
-Client setup: 35.06
-Server punch: 54.46
-Client punch: 137.83
-Client redeem: 72.4
-Server redeem: 95.93
+Server setup: 13.32
+Client setup: 34.97
+Server punch: 54.45
+Client punch: 137.79
+Client redeem: 36.43
+Server redeem: 48.11
 
 Communication costs (for messages sent in protocol)
 Server setup: 144 bytes (g^secret for both groups == 48 + 96)
 Client setup: none
 Client punch: 144 bytes (the 2 punchcard group elements)
 Server punch: 496 bytes (2 new group elements and 2 proofs which have 2 group elements and a scalar = 144 + (96 + 32) + (192 + 32) = 496)
-Client redeem: 1,216 bytes (the final cards and the secrets used to make the cards, 32 bytes each secret, 576 bytes each final card)
+Client redeem: 640 bytes (the final card and the secrets used to make the cards, 32 bytes each secret, 576 bytes for final card)
 Server redeem: none
