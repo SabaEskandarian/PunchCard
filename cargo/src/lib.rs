@@ -41,7 +41,7 @@ pub extern fn benchmarkCode() -> *mut c_char {
     let mut times = Times {
     	num_iterations: 1000, //how many iterations to average over
     	num_punches: 10, //how many punches before a card is redeemed, must be even for the pairing version test code
-    	setup_rows: 0, //change to larger number to test with used cards in db, also make this larger for the lookup test
+    	setup_rows: 0, //change to larger number to test with used cards in db, also make this larger for the lookup test (or else it will crash)
     	test_type: Tests::Group,
     	server_setup: 0,
  		client_setup: 0,
@@ -165,6 +165,11 @@ pub extern fn benchmarkCode() -> *mut c_char {
                 let _res = pairing_client.exp_test_g2();
                 let elapsed = now.elapsed().as_micros();
                 times.server_redeem += elapsed;
+                
+                let now = Instant::now();
+                let _res = pairing_client.pair_test();
+                let elapsed = now.elapsed().as_micros();
+                times.server_punch += elapsed;
             }
             
                 perf_string = "Performance Results for misc experiment\n";

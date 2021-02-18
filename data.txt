@@ -57,7 +57,7 @@ Server punch: 128 bytes (new group element and proof which has 2 group elements 
 Client redeem: 64 bytes (the final card and the secret used to make the card, 32 bytes each)
 Server redeem: none
 
-
+On server,
 Time for lookup in hashset of 1 million entries is <1 microsecond (about .2-.3 microseconds)
 Time for exponentiation is about 50 microseconds (usually between 50 and 55)
 so to do 1M exponentiations (one for each previously used card) would probably be about 50 seconds. The speedup is about 8 orders of magnitude. 
@@ -109,3 +109,8 @@ Client punch: 144 bytes (the 2 punchcard group elements)
 Server punch: 496 bytes (2 new group elements and 2 proofs which have 2 group elements and a scalar = 144 + (96 + 32) + (192 + 32) = 496)
 Client redeem: 640 bytes (the final card and the secrets used to make the cards, 32 bytes each secret, 576 bytes for final card)
 Server redeem: none
+
+On server,
+Time for exponentiation in G1 is about 250 microseconds
+Time for exponentiation in G2 is aobut 800 microseconds
+Time for pairing is about 2 milliseconds

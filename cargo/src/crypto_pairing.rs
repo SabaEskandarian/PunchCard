@@ -372,5 +372,9 @@ impl PairPunchCard {
         self.g2card.punch_card.mul_assign(self.g2card.last_mask);
         self.g2card.punch_card
 	}
+	
+	pub fn pair_test(&mut self) -> Fq12{
+        Bls12::pairing(self.g1card.punch_card, self.g2card.punch_card)
+    }
 
 }
