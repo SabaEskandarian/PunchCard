@@ -2,7 +2,7 @@ This code accompanies the paper "Fast Privacy-Preserving Punch Cards" (https://e
 
 `data.txt` contains the evaluation results that appear in the paper. 
 
-If you want to run the code on Android, add NDK according to directions at https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-21-rust-on-android.html
+If you want to run the code on Android, add NDK according to directions at https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-21-rust-on-android.html. Then uncomment the commented lines in `build.sh`
 
 To test the code locally, simply run `./build.sh` and then `./cargo/target/release/mybin`. You will need Rust installed. 
 
